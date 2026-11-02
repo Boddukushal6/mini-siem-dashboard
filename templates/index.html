@@ -1,0 +1,600 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Mini SIEM Dashboard</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7f5;
+            color: #17251c;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 1250px;
+            margin: auto;
+        }
+
+        /* HEADER */
+        header {
+            background: #123d2a;
+            color: white;
+            padding: 25px;
+            border-radius: 14px;
+            margin-bottom: 25px;
+            border-left: 6px solid #16a34a;
+        }
+
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: #d1fae5;
+            font-size: 14px;
+        }
+
+        /* SECTION TITLES */
+        .section-title {
+            font-size: 21px;
+            margin: 28px 0 16px;
+            color: #14532d;
+        }
+
+        /* STAT CARDS */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            border: 1px solid #dce8df;
+            border-top: 4px solid #16a34a;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+
+        .stat-card p {
+            font-size: 30px;
+            font-weight: bold;
+            color: #166534;
+        }
+
+        .stat-card.failed {
+            border-top-color: #dc2626;
+        }
+
+        .stat-card.failed p {
+            color: #dc2626;
+        }
+
+        .stat-card.alerts {
+            border-top-color: #dc2626;
+        }
+
+        .stat-card.alerts p {
+            color: #dc2626;
+        }
+
+        /* CHARTS */
+        .charts {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            border: 1px solid #dce8df;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+        }
+
+        .chart-card h3 {
+            color: #14532d;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            height: 260px;
+            position: relative;
+        }
+
+        /* SEARCH AND FILTER */
+        .filter-form {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            background: white;
+            padding: 18px;
+            border-radius: 12px;
+            border: 1px solid #dce8df;
+        }
+
+        .filter-form input,
+        .filter-form select {
+            padding: 12px;
+            border: 1px solid #cbd5cf;
+            border-radius: 7px;
+            background: white;
+            color: #17251c;
+            font-size: 14px;
+        }
+
+        .filter-form input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-form button {
+            padding: 12px 22px;
+            background: #15803d;
+            color: white;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .filter-form button:hover {
+            background: #166534;
+        }
+
+        .filter-form a {
+            padding: 12px 18px;
+            background: #fee2e2;
+            color: #b91c1c;
+            text-decoration: none;
+            border-radius: 7px;
+            font-weight: bold;
+        }
+
+        /* ALERT TABLE */
+        .table-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #dce8df;
+            overflow-x: auto;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 750px;
+        }
+
+        th {
+            background: #14532d;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        td {
+            padding: 14px 15px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 13px;
+        }
+
+        tr:hover td {
+            background: #f0fdf4;
+        }
+
+        /* SEVERITY BADGES */
+        .severity {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .high {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .medium {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .low {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 25px;
+            color: #64748b;
+        }
+
+        /* FOOTER */
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 850px) {
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .charts {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 500px) {
+            body {
+                padding: 15px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 22px;
+            }
+        }
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.status-indicator {
+    color: #86efac;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.updated {
+    color: #ffffff;
+    font-size: 12px;
+}
+
+.refresh-btn {
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.refresh-btn:hover {
+    background: #15803d;
+}
+
+.severity-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin-top: 20px;
+}
+
+.severity-box {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #dce8df;
+}
+
+.severity-box h3 {
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.severity-box p {
+    font-size: 27px;
+    font-weight: bold;
+}
+
+.high-box {
+    border-left: 5px solid #dc2626;
+    color: #b91c1c;
+}
+
+.medium-box {
+    border-left: 5px solid #f59e0b;
+    color: #92400e;
+}
+
+.low-box {
+    border-left: 5px solid #16a34a;
+    color: #166534;
+}
+
+@media (max-width: 600px) {
+    .severity-summary {
+        grid-template-columns: 1fr;
+    }
+}
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+    <header>
+        <h1>🛡 Mini SIEM Dashboard</h1>
+        <p>Security Information and Event Management System</p>
+        <p>Real-time Log Monitoring | Threat Detection | Security Alerts</p>
+<div class="status-row">
+    <span class="status-indicator">● SYSTEM ONLINE</span>
+
+    <span class="updated">
+        Last Updated: {{ last_updated }}
+    </span>
+
+    <button onclick="location.reload()" class="refresh-btn">
+        ↻ Refresh
+    </button>
+</div>
+    </header>
+
+    <!-- STATISTICS -->
+    <h2 class="section-title">Dashboard Overview</h2>
+
+    <div class="stats">
+
+        <div class="stat-card alerts">
+            <h3>Total Security Alerts</h3>
+            <p>{{ total_alerts }}</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>Successful Logins</h3>
+            <p>{{ success_count }}</p>
+        </div>
+
+        <div class="stat-card failed">
+            <h3>Failed Logins</h3>
+            <p>{{ failed_count }}</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>Suspicious IPs</h3>
+            <p>{{ suspicious_ips }}</p>
+        </div>
+
+    </div>
+<div class="severity-summary">
+
+    <div class="severity-box high-box">
+        <h3>HIGH ALERTS</h3>
+        <p>{{ high_count }}</p>
+    </div>
+
+    <div class="severity-box medium-box">
+        <h3>MEDIUM ALERTS</h3>
+        <p>{{ medium_count }}</p>
+    </div>
+
+    <div class="severity-box low-box">
+        <h3>LOW ALERTS</h3>
+        <p>{{ low_count }}</p>
+    </div>
+
+</div>
+    <!-- CHARTS -->
+    <h2 class="section-title">Security Analytics</h2>
+
+    <div class="charts">
+
+        <div class="chart-card">
+            <h3>Login Activity</h3>
+            <div class="chart-container">
+                <canvas id="loginChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Alert Severity Distribution</h3>
+            <div class="chart-container">
+                <canvas id="severityChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SEARCH AND FILTER -->
+    <h2 class="section-title">Security Alerts</h2>
+
+    <form method="GET" action="/" class="filter-form">
+
+        <input
+            type="text"
+            name="ip"
+            placeholder="Search IP address..."
+            value="{{ search_ip }}"
+        >
+
+        <select name="severity">
+            <option value="">All Severities</option>
+
+            <option value="High"
+                {% if selected_severity == "High" %}selected{% endif %}>
+                High
+            </option>
+
+            <option value="Medium"
+                {% if selected_severity == "Medium" %}selected{% endif %}>
+                Medium
+            </option>
+
+            <option value="Low"
+                {% if selected_severity == "Low" %}selected{% endif %}>
+                Low
+            </option>
+        </select>
+
+        <button type="submit">Apply Filter</button>
+
+        <a href="/">Clear</a>
+
+    </form>
+
+    <!-- ALERT TABLE -->
+    <div class="table-card">
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Alert Type</th>
+                    <th>Source IP</th>
+                    <th>Failed Attempts</th>
+                    <th>Severity</th>
+                    <th>Detected At</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for alert in alerts %}
+
+                <tr>
+                    <td>{{ alert["id"] }}</td>
+
+                    <td>{{ alert["alert_type"] }}</td>
+
+                    <td>{{ alert["source_ip"] }}</td>
+
+                    <td>{{ alert["failed_attempts"] }}</td>
+
+                    <td>
+                        <span class="severity {{ (alert['severity'] or 'Medium') | lower }}">
+                            {{ alert["severity"] or "Medium" }}
+                        </span>
+                    </td>
+
+                    <td>{{ alert["detected_at"] or "Unknown" }}</td>
+                </tr>
+
+                {% else %}
+
+                <tr>
+                    <td colspan="6" class="empty">
+                        No security alerts found.
+                    </td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+        </table>
+
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        Mini SIEM Dashboard | Cybersecurity Learning Project
+    </footer>
+
+</div>
+
+<!-- CHART JAVASCRIPT -->
+<script>
+
+    // Login Activity Chart
+    new Chart(document.getElementById("loginChart"), {
+        type: "doughnut",
+
+        data: {
+            labels: ["Successful Logins", "Failed Logins"],
+
+            datasets: [{
+                data: [
+                    {{ success_count }},
+                    {{ failed_count }}
+                ],
+
+                backgroundColor: [
+                    "#16a34a",
+                    "#dc2626"
+                ],
+
+                borderWidth: 2,
+                borderColor: "#ffffff"
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+
+    // Alert Severity Chart
+    new Chart(document.getElementById("severityChart"), {
+        type: "doughnut",
+
+        data: {
+            labels: {{ severity_labels | tojson }},
+
+            datasets: [{
+                data: {{ severity_counts | tojson }},
+
+                backgroundColor: [
+                    "#dc2626",
+                    "#16a34a",
+                    "#f59e0b"
+                ],
+
+                borderWidth: 2,
+                borderColor: "#ffffff"
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+</script>
+
+</body>
+</html>
